@@ -33,6 +33,9 @@
 // being two seperate banner items to access each one
 // (have a shared landing page)
 
+// TODO: alongside spotify links, if not available on spotify maybe using bandcamp
+// API to provide links to these releases
+
 // first we declare my last.fm API key
 const key = '3e0c61f86ab0621665f8bb0bccd2eaf9';
 
