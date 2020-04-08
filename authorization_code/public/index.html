@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+
+<head>
+  <!-- Required meta tags-->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+    integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+  <!-- My CSS-->
+  <link rel="stylesheet" type="text/css" href="base.css">
+
+  <title>Music Recommendations</title>
+</head>
+
+<body>
+  <header>
+    <nav class="navbar navbar-expand-sm bg-dark navbar-dark">
+      <a class="navbar-brand" href="/">Music Recommendations</a>
+      <ul class="navbar-nav">
+        <li class="nav-item">
+          <a class="nav-link">About</a>
+        </li>
+      </ul>
+    </nav>
+  </header>
+  <div id="login" class="container card card-body">
+    <h1>Connect your spotify account to begin</h1>
+    <a href="/login" class="btn btn-success">Log in with Spotify</a>
+  </div>
+  <div id="loggedin">
+    <div id='enterUsername' class="container card card-body">
+      <h1>Find the music your friends are listening to the most</h1>
+      <p>Enter your last.fm username to get started</p>
+      <form name='enterUsername'>
+        <div class="input-group">
+          <input type="text" class="form-control" name="username" placeholder="last.fm username">
+          <div class="input-group-append">
+            <button type="submit" class='btn btn-danger'>Get Started</button>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div id='searchSettings' class='container card' style="display:none">
+      <div class="card-header">Customise your search preferences</div>
+      <div class="card-body">
+        <form name='searchSettings'>
+          <div class="form-group">
+            <label for="searchType">Type of search:</label>
+            <input type="radio" name="searchType" value="album" checked>Albums
+            <input type="radio" name="searchType" value="artist">Artists
+            <input type="radio" name="searchType" value="track">Tracks
+          </div>
+          <div class="form-group">
+            <label for="timePeriod">Time period:</label>
+            <input type="radio" name="timePeriod" value="7day">Last week
+            <input type="radio" name="timePeriod" value="1month">Last month
+            <input type="radio" name="timePeriod" value="12month">Last year
+            <input type="radio" name="timePeriod" value="overall" checked>Overall
+          </div>
+          <div class="form-group">
+            <label for="unheard">Only display unheard items:</label>
+            <input type="checkbox" name="unheard">
+          </div>
+          <button type="submit" class='btn btn-primary'>Submit</button>
+        </form>
+      </div>
+    </div>
+    <div id='outer-progress' class="container" style='visibility:hidden'>
+      <p id='status'></p>
+      <div class="progress">
+        <div id='progress' class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>
+      </div>
+    </div>
+    <div id='new-results' class='container' style='display:none'>
+      <div class='row' id='display-results'></div>
+    </div>
+    <div id="user-profile">
+    </div>
+  </div>
+
+  <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+  <script>
+    (function () {
+
+      /**
+       * Obtains parameters from the hash of the URL
+       * @return Object
+       */
+      function getHashParams() {
+        var hashParams = {};
+        var e, r = /([^&;=]+)=?([^&;]*)/g,
+          q = window.location.hash.substring(1);
+        while (e = r.exec(q)) {
+          hashParams[e[1]] = decodeURIComponent(e[2]);
+        }
+        return hashParams;
+      }
+
+      var params = getHashParams();
+
+      var access_token = params.access_token,
+        refresh_token = params.refresh_token,
+        error = params.error;
+
+      if (error) {
+        alert('There was an error during the authentication');
+      } else {
+        if (access_token) {
+
+          $.ajax({
+            url: 'https://api.spotify.com/v1/me',
+            headers: {
+              'Authorization': 'Bearer ' + access_token
+            },
+            success: function (response) {
+              // render logged in screen
+              $('#login').hide();
+              $('#loggedin').show();
+            }
+          });
+        } else {
+          // render initial screen
+          $('#loggedin').hide();
+          $('#login').show();
+        }
+      }
+    })();
+  </script>
+
+  <!-- My javascript -->
+  <script type="module" src="base.js" crossorigin="use-credentials"></script>
+
+  <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+    integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+    crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+    integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+    crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+    integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+    crossorigin="anonymous"></script>
+</body>
+
+</html>
