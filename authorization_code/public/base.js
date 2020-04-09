@@ -1,37 +1,26 @@
 // Music Recommendations
 // by Dion Earle
 
-// TODO: last.fm API has disabled artist and track images. Use spotify API to put in images instead
-// (could also use spotify API for album images as well to simplify code)
+// TODO: use regex or similar tool so multi artist albums (e.g. pinata by freddie gibbs & madlib) are seen as the same as pinata by freddie gibbs,
+// another example is fetti by currensy, freddie gibbs & alchemist is same as fetti by currensy,
+// and that albums ending with something in brackets (e.g. rodeo (expanded edition) by travis scott) is seen the same as rodeo by travis scott
+// This also impacts artist display, as for Freddie Gibbs & Madlib it can't get link or image, yet works for Freddie Gibbs
 
 // TODO: Once list is displayed, have a way to search again without refreshing the page
 // or going back.
 // Could be done by simply having banner above the list stating to 'Try another search'
 // which links back to the search banner
 
+// TODO: setup pagination for results
+
 // TODO: work on CSS and HTML to make landing page more appealing
 // + all other aspects look more clean
-
-// TODO: use regex or similar tool so multi artist albums (e.g. pinata by freddie gibbs & madlib) are seen as the same as pinata by freddie gibbs,
-// another example is fetti by currensy, freddie gibbs & alchemist is same as fetti by currensy,
-// and that albums ending with something in brackets (e.g. rodeo (expanded edition) by travis scott) is seen the same as rodeo by travis scott
-// This also impacts artist display, as for Freddie Gibbs & Madlib it can't get link or image, yet works for Freddie Gibbs
-
 
 // TODO: option to display releases with less than 'x' plays for you
 // (replaces only unheard releases. e.g. 0 for unheard)
 // Also only show releases if not listned to in past month/year (for forgotten gems etc.)
 
-// TODO: setup pagination for results
-
-// TODO: only display albums released in past week/month/year
-
-// TODO: Combine new music releases and this into a single app, with there
-// being two seperate banner items to access each one
-// (have a shared landing page)
-
-// TODO: alongside spotify links, if not available on spotify maybe using bandcamp
-// API to provide links to these releases
+// TODO: option to only display albums released in past week/month/year
 
 // first we declare my last.fm API key
 const key = '3e0c61f86ab0621665f8bb0bccd2eaf9';
@@ -351,7 +340,13 @@ function sortResults(username, friends, unheard, searchType, results) {
     results.sort((a, b) => parseFloat(b.score) - parseFloat(a.score));
 
     if (unheard) {
-        filterUnheard(username, searchType, results);
+
+        // first we make the progress bar visible and describe the current status
+        document.getElementById('progress').style.width = '0%';
+        document.getElementById('status').textContent = 'Filtering out results you have already heard...';
+
+        let unheardReleases = [];
+        filterUnheard(username, searchType, results, 0, unheardReleases);
     } else {
         // for the first 50 items in the results array, we want to display them
         pageDisplay(searchType, results, 0);
@@ -359,26 +354,20 @@ function sortResults(username, friends, unheard, searchType, results) {
 }
 
 // checks a user's listen history to determine whether they have scrobbled an item before
-function filterUnheard(username, searchType, results) {
-
-    // first we make the progress bar visible and describe the current status
-    document.getElementById('progress').style.width = '0%';
-    document.getElementById('status').textContent = 'Filtering out results you have already heard...';
+function filterUnheard(username, searchType, results, start, unheardReleases) {
 
     // we keep a list of promises so we don't continue until all results are fetched
     const promiseList = [];
 
     // we also keep track of the progress for this section
-    let progress = 0;
+    let progress = start;
 
-    // we do the following as searching through more than 500 releases takes far too long,
-    // so we cap it in the hopes that there will be 50 unheard results before this is reached
-    let max = results.length;
-    if (results.length > 200) {
-        max = 200;
+    let max = start + 50;
+    if (max > results.length) {
+        max = results.length;
     }
 
-    for (let i = 0; i < max; i++) {
+    for (let i = start; i < max; i++) {
 
         let query = {};
 
@@ -433,12 +422,12 @@ function filterUnheard(username, searchType, results) {
 
                     // if the playcount for this item is not zero, we set the score to be negative so it won't be displayed
                     if (searchType === 'artist') {
-                        if (response[searchType].stats.userplaycount !== '0') {
-                            results[i].score = -1;
+                        if (response[searchType].stats.userplaycount === '0') {
+                            unheardReleases.push(results[i]);
                         }
                     } else {
-                        if (response[searchType].userplaycount !== '0') {
-                            results[i].score = -1;
+                        if (response[searchType].userplaycount === '0') {
+                            unheardReleases.push(results[i]);
                         }
 
                     }
@@ -446,7 +435,7 @@ function filterUnheard(username, searchType, results) {
 
                 // we update the progress bar to show the progress for this section
                 progress++;
-                document.getElementById('progress').style.width = ((progress / max) * 100) + '%';
+                document.getElementById('progress').style.width = ((progress / results.length) * 100) + '%';
 
             })
             .catch(error => {
@@ -462,12 +451,17 @@ function filterUnheard(username, searchType, results) {
     // once we have filtered through all results we can display the first page
     Promise.all(promiseList)
         .then(function () {
-            pageDisplay(searchType, results, 0);
+            if (unheardReleases.length >= 50 || progress == results.length) {
+                pageDisplay(searchType, unheardReleases, 0);
+            } else {
+                filterUnheard(username, searchType, results, start + 50, unheardReleases);
+            }
+
         })
 }
 
 // displays a given page of results
-function pageDisplay(searchType, results, i) {
+function pageDisplay(searchType, results, start) {
 
     // first we hide the progress bar from the previous section
     document.getElementById('progress').style.width = '0%';
@@ -475,21 +469,8 @@ function pageDisplay(searchType, results, i) {
     document.getElementById('new-results').style.display = 'block';
 
     // we then loop through the next 50 items in the results
-    let max = i + 50;
-    while (i < max) {
-
-        // if the score if the current result is not -1, then we can display it to the user
-        if (results[i].score !== -1) {
-            displayResult(i + 1, searchType, results[i]);
-            // otherwise it is heard and we don't want to display it
-        } else {
-            // if there are still results after the max index, we increase max to keep looking for a valid release
-            if (max < results.length) {
-                max++;
-            }
-        }
-
-        i++;
+    for (let i = 0; i < 50; i++) {
+        displayResult(i + 1, searchType, results[i]);
     }
 }
 
@@ -521,7 +502,7 @@ function displayResult(rank, searchType, result) {
     nameText.classList.add('nameText');
     nameText.textContent = result.name;
     infoColumn.appendChild(nameText);
-    
+
     if (searchType !== 'artist') {
         const artistText = document.createElement('p');
         artistText.textContent = result.artist;
@@ -603,13 +584,25 @@ function connectSpotify(input, searchType, image, spotifyLink) {
         .then(response => {
 
             if (searchType == 'artist') {
-                image.src = response.artists.items[0].images[0].url;
-                spotifyLink.href = response.artists.items[0].external_urls.spotify;
+                if (response.artists.items.length == 0) {
+                    spotifyLink.textContent = 'Couldn\'t find on Spotify';
+                } else {
+                    image.src = response.artists.items[0].images[0].url;
+                    spotifyLink.href = response.artists.items[0].external_urls.spotify;
+                }
             } else if (searchType == 'track') {
-                image.src = response.tracks.items[0].album.images[0].url;
-                spotifyLink.href = response.tracks.items[0].external_urls.spotify;
+                if (response.tracks.items.length == 0) {
+                    spotifyLink.textContent = 'Couldn\'t find on Spotify';
+                } else {
+                    image.src = response.tracks.items[0].album.images[0].url;
+                    spotifyLink.href = response.tracks.items[0].external_urls.spotify;
+                }
             } else {
-                spotifyLink.href = response.albums.items[0].external_urls.spotify;
+                if (response.albums.items.length == 0) {
+                    spotifyLink.textContent = 'Couldn\'t find on Spotify';
+                } else {
+                    spotifyLink.href = response.albums.items[0].external_urls.spotify;
+                }
             }
         });
 
