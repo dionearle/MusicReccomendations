@@ -13,3 +13,52 @@ body {
 #outer-progress {
   margin-top: 50px;
 }
+
+.row {
+  display: table;
+  width: 100%;
+  background-color: #cbf3f0;
+}
+
+.numColumn,
+.imgColumn,
+.infoColumn {
+  display: table-cell;
+  float: left;
+  padding: 10px;
+}
+
+.numColumn {
+  width: 15%;
+}
+
+.imgColumn {
+  width: 40%;
+}
+
+.infoColumn {
+  width: 45%;
+}
+
+.rankCircle {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  color: #ffffff;
+  line-height: 50px;
+  text-align: center;
+  background: #2ec4b6;
+}
+
+.albumArt {
+  height: 250px;
+  width: 250px;
+}
+
+.nameText {
+  color: #ff9f1c;
+}
+
+.artistText {
+  color: #ffbf69;
+}

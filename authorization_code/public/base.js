@@ -1,10 +1,8 @@
 // Music Recommendations
 // by Dion Earle
 
-// TODO: Change to a list based view where each release is on a new row.
-// VERY SIMILAR TO HOW RYM CHARTS LOOK
-// Each row should look like following:
-// #1 (rank) Cover Album/Artist (one above other in different sized fonts) Widgets lined up in a row to view in spotify, add to playlist and save album to library
+// TODO: last.fm API has disabled artist and track images. Use spotify API to put in images instead
+// (could also use spotify API for album images as well to simplify code)
 
 // TODO: Once list is displayed, have a way to search again without refreshing the page
 // or going back.
@@ -17,9 +15,8 @@
 // TODO: use regex or similar tool so multi artist albums (e.g. pinata by freddie gibbs & madlib) are seen as the same as pinata by freddie gibbs,
 // another example is fetti by currensy, freddie gibbs & alchemist is same as fetti by currensy,
 // and that albums ending with something in brackets (e.g. rodeo (expanded edition) by travis scott) is seen the same as rodeo by travis scott
+// This also impacts artist display, as for Freddie Gibbs & Madlib it can't get link or image, yet works for Freddie Gibbs
 
-// TODO: last.fm API has disabled artist and track images. Use spotify API to put in images instead
-// (could also use spotify API for album images as well to simplify code)
 
 // TODO: option to display releases with less than 'x' plays for you
 // (replaces only unheard releases. e.g. 0 for unheard)
@@ -483,7 +480,7 @@ function pageDisplay(searchType, results, i) {
 
         // if the score if the current result is not -1, then we can display it to the user
         if (results[i].score !== -1) {
-            displayResult(searchType, results[i]);
+            displayResult(i + 1, searchType, results[i]);
             // otherwise it is heard and we don't want to display it
         } else {
             // if there are still results after the max index, we increase max to keep looking for a valid release
@@ -497,32 +494,56 @@ function pageDisplay(searchType, results, i) {
 }
 
 // given metadata about a result, it is displayed on the page
-function displayResult(searchType, result) {
+function displayResult(rank, searchType, result) {
 
     const release = document.createElement('a');
-    release.classList.add('col-3');
-    release.style.align = 'center';
+    release.classList.add('row');
 
-    const releaseText = document.createElement('p');
-    if (searchType === 'artist') {
-        releaseText.textContent = result.name + ' (score: ' + result.score + ' & playcount: ' + result.playcount + ')';
-    } else {
-        releaseText.textContent = result.artist + ': ' + result.name + ' (score: ' + result.score + ' & playcount: ' + result.playcount + ')';
-    }
-    release.appendChild(releaseText);
+    const numColumn = document.createElement('div');
+    numColumn.classList.add('numColumn');
+    const num = document.createElement('div');
+    num.classList.add('rankCircle');
+    num.textContent = rank;
+    numColumn.appendChild(num);
+    release.appendChild(numColumn);
 
+    const imgColumn = document.createElement('div');
+    imgColumn.classList.add('imgColumn');
     const image = document.createElement('img');
+    image.classList.add('albumArt');
     image.src = result.image;
-    image.style.height = '100px';
-    image.style.width = '100px';
-    release.insertBefore(image, releaseText);
+    imgColumn.appendChild(image);
+    release.appendChild(imgColumn);
+
+    const infoColumn = document.createElement('div');
+    infoColumn.classList.add('infoColumn');
+    const nameText = document.createElement('h2');
+    nameText.classList.add('nameText');
+    nameText.textContent = result.name;
+    infoColumn.appendChild(nameText);
+    
+    if (searchType !== 'artist') {
+        const artistText = document.createElement('p');
+        artistText.textContent = result.artist;
+        artistText.classList.add('artistText');
+        infoColumn.appendChild(artistText);
+    }
+
+    const spotifyLink = document.createElement('a');
+    spotifyLink.classList.add('btn');
+    spotifyLink.classList.add('btn-success');
+    spotifyLink.textContent = 'Open in Spotify';
+    infoColumn.appendChild(spotifyLink);
+    release.appendChild(infoColumn);
 
     document.getElementById('display-results').appendChild(release);
 
-    spotifyTest(result, release);
+    connectSpotify(result, searchType, image, spotifyLink);
 }
 
-function spotifyTest(input, release) {
+// searches the release on spotify and creates a link to it
+function connectSpotify(input, searchType, image, spotifyLink) {
+
     const artist = input.artist;
     const name = input.name;
 
@@ -551,10 +572,18 @@ function spotifyTest(input, release) {
         }
     }
 
-    // here we setup the query user.getfriends
-    const query = {
-        q: artist + ' ' + name,
-        type: 'album'
+    let query = {};
+
+    if (searchType !== 'artist') {
+        query = {
+            q: artist + ' ' + name,
+            type: searchType
+        }
+    } else {
+        query = {
+            q: name,
+            type: searchType
+        }
     }
 
     // we attach this query to the last.fm api URL
@@ -572,10 +601,16 @@ function spotifyTest(input, release) {
             return response.json();
         })
         .then(response => {
-            const result = response.albums.items[0];
 
-            release.href = result.external_urls.spotify;
-
+            if (searchType == 'artist') {
+                image.src = response.artists.items[0].images[0].url;
+                spotifyLink.href = response.artists.items[0].external_urls.spotify;
+            } else if (searchType == 'track') {
+                image.src = response.tracks.items[0].album.images[0].url;
+                spotifyLink.href = response.tracks.items[0].external_urls.spotify;
+            } else {
+                spotifyLink.href = response.albums.items[0].external_urls.spotify;
+            }
         });
 
 }
